@@ -27,6 +27,8 @@ class LogicOpDynamicState : public ApiVulkanSample
 	LogicOpDynamicState();
 
 	virtual bool prepare(vkb::Platform &platform) override;
+	virtual void render(float delta_time) override;
+	virtual void build_command_buffers() override;
 
 	virtual ~LogicOpDynamicState() = default;
 };

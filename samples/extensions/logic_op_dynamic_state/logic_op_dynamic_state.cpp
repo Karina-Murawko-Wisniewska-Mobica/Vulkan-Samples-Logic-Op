@@ -58,6 +58,22 @@ bool LogicOpDynamicState::prepare(vkb::Platform &platform)
 	return true;
 }
 
+/**
+ * 	@fn void LogicOpDynamicState::render(float delta_time)
+ */
+void LogicOpDynamicState::render(float delta_time)
+{
+	// TODO
+}
+
+/**
+ * 	@fn void LogicOpDynamicState::build_command_buffers()
+ */
+void LogicOpDynamicState::build_command_buffers()
+{
+	// TODO
+}
+
 std::unique_ptr<vkb::VulkanSample> create_logic_op_dynamic_state()
 {
 	return std::make_unique<LogicOpDynamicState>();
