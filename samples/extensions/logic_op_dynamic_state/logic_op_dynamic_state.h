@@ -19,9 +19,9 @@
 
 #include "rendering/render_pipeline.h"
 #include "scene_graph/components/camera.h"
-#include "vulkan_sample.h"
+#include "api_vulkan_sample.h"
 
-class LogicOpDynamicState : public vkb::VulkanSample
+class LogicOpDynamicState : public ApiVulkanSample
 {
   public:
 	LogicOpDynamicState();
