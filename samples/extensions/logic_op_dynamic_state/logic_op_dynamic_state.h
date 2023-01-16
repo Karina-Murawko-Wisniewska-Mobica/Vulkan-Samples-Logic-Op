@@ -17,20 +17,34 @@
 
 #pragma once
 
+#include "api_vulkan_sample.h"
 #include "rendering/render_pipeline.h"
 #include "scene_graph/components/camera.h"
-#include "api_vulkan_sample.h"
 
 class LogicOpDynamicState : public ApiVulkanSample
 {
   public:
 	LogicOpDynamicState();
+	virtual ~LogicOpDynamicState();
 
 	virtual bool prepare(vkb::Platform &platform) override;
 	virtual void render(float delta_time) override;
 	virtual void build_command_buffers() override;
+	virtual void request_gpu_features(vkb::PhysicalDevice &gpu) override;
 
-	virtual ~LogicOpDynamicState() = default;
+	void prepare_uniform_buffers();
+	void update_uniform_buffers();
+	void create_pipeline();
+	void draw();
+
+	void load_assets();
+	void create_descriptor_pool();
+	void setup_descriptor_set_layout();
+	void create_descriptor_sets();
+
+	void model_data_creation();
+	void draw_created_model(VkCommandBuffer commandBuffer);
+	void on_update_ui_overlay(vkb::Drawer &drawer);
 };
 
 std::unique_ptr<vkb::VulkanSample> create_logic_op_dynamic_state();
