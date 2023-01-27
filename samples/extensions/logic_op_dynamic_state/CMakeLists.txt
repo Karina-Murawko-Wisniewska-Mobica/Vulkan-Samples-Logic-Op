@@ -24,5 +24,9 @@ add_sample(
     CATEGORY ${CATEGORY_NAME}
     AUTHOR "Mobica"
     NAME "Logic operations dynamic state"
-    DESCRIPTION "TODO: add sample description")
-    #TODO: add SHADER_FILES_GLSL
+    DESCRIPTION "Demonstrate how to use logic operations dynamically, which can reduce the number of pipeline objects that are need to be created."
+    SHADER_FILES_GLSL
+    "logic_op_dynamic_state/background.vert"
+    "logic_op_dynamic_state/background.frag"
+    "logic_op_dynamic_state/model.vert"
+    "logic_op_dynamic_state/model.frag")
