@@ -18,12 +18,17 @@
 #pragma once
 
 #include "api_vulkan_sample.h"
-//#include "rendering/render_pipeline.h"
-//#include "scene_graph/components/camera.h"
+#include "scene_graph/components/pbr_material.h"
 
 class LogicOpDynamicState : public ApiVulkanSample
 {
   public:
+	typedef struct ModelDynamicParam
+	{
+		bool depth_bias         = false;
+		bool rasterizer_discard = false;
+	} ModelDynamicParam;
+
 	//struct UBOVS
 	//{
 	//	glm::mat4 projection;
@@ -32,56 +37,60 @@ class LogicOpDynamicState : public ApiVulkanSample
 	//	//float     modelscale = 0.15f;
 	//} ubo_vs;
 
-	struct UBOBAS
+	/* Buffer used in all pipelines */
+	struct UBOCOMM
 	{
 		glm::mat4 projection;
 		glm::mat4 view;
+	} ubo_common;
+
+	struct UBOBAS
+	{
 		glm::vec4 ambientLightColor = glm::vec4(1.f, 1.f, 1.f, 0.1f);
 		glm::vec4 lightPosition     = glm::vec4(-3.0f, -8.0f, 6.0f, -1.0f);
 		glm::vec4 lightColor        = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 		float     lightIntensity    = 50.0f;
-	} ubo_model;
+	} ubo_baseline;
 
-	struct UBOBG
+	struct UBOTESS
 	{
-		glm::mat4 projection;
-		glm::mat4 background_modelview;
-
-	} ubo_background;
+		float tessellation_factor = 1.0f;
+	} ubo_tess;
 
 	struct
 	{
-		VkDescriptorSetLayout model{VK_NULL_HANDLE};
+		VkDescriptorSetLayout baseline{VK_NULL_HANDLE};
+		VkDescriptorSetLayout tesselation{VK_NULL_HANDLE};
 		VkDescriptorSetLayout background{VK_NULL_HANDLE};
 	} descriptor_set_layouts;
 
 	struct
 	{
-		VkPipelineLayout model{VK_NULL_HANDLE};
+		VkPipelineLayout baseline{VK_NULL_HANDLE};
+		VkPipelineLayout tesselation{VK_NULL_HANDLE};
 		VkPipelineLayout background{VK_NULL_HANDLE};
 	} pipeline_layouts;
 
 	struct
 	{
-		VkDescriptorSet model{VK_NULL_HANDLE};
+		VkDescriptorSet baseline{VK_NULL_HANDLE};
+		VkDescriptorSet tesselation{VK_NULL_HANDLE};
 		VkDescriptorSet background{VK_NULL_HANDLE};
 	} descriptor_sets;
 
 	struct
 	{
-		VkPipeline model{VK_NULL_HANDLE};
+		VkPipeline baseline{VK_NULL_HANDLE};
+		VkPipeline tesselation{VK_NULL_HANDLE};
 		VkPipeline background{VK_NULL_HANDLE};
 	} pipeline;
 
 	struct
 	{
-		std::unique_ptr<vkb::core::Buffer> model;
-		std::unique_ptr<vkb::core::Buffer> background;
+		std::unique_ptr<vkb::core::Buffer> common;
+		std::unique_ptr<vkb::core::Buffer> baseline;
+		std::unique_ptr<vkb::core::Buffer> tesselation;
 	} uniform_buffers;
-
-	std::unique_ptr<vkb::sg::SubMesh> background_model;
-	std::unique_ptr<vkb::sg::SubMesh>  model;
-	std::unique_ptr<vkb::core::Buffer> ubo;
 
 	struct
 	{
@@ -100,12 +109,34 @@ class LogicOpDynamicState : public ApiVulkanSample
 		vkb::sg::Node *   node;
 		vkb::sg::SubMesh *sub_mesh;
 	};
-	std::vector<SceneNode> scene_elements_model;
+	std::vector<SceneNode> scene_elements_baseline;
+	std::vector<SceneNode> scene_elements_tess;
+
+	std::unique_ptr<vkb::sg::SubMesh> background_model;
+
+	struct Cube
+	{
+		std::unique_ptr<vkb::core::Buffer> vertices_pos;
+		std::unique_ptr<vkb::core::Buffer> vertices_norm;
+		std::unique_ptr<vkb::core::Buffer> indices;
+		uint32_t                           index_count;
+	} cube;
+
+
+	//struct
+	//{
+	//	int selectd_operation = 0;
+	//	bool time_tick = false;
+	//} gui_settings;
 
 	struct
 	{
-		int selectd_operation = 0;
-		bool time_tick = false;
+		bool                           tessellation = false;
+		float                          tess_factor  = 1.0f;
+		std::vector<ModelDynamicParam> objects;
+		int                            selected_obj     = 0;
+		bool                           selection_active = true;
+		bool                           time_tick        = false;
 	} gui_settings;
 
 	LogicOpDynamicState();
@@ -115,7 +146,7 @@ class LogicOpDynamicState : public ApiVulkanSample
 	virtual void render(float delta_time) override;
 	virtual void build_command_buffers() override;
 	virtual void request_gpu_features(vkb::PhysicalDevice &gpu) override;
-	//virtual void update(float delta_time) override;
+	virtual void update(float delta_time) override;
 
 	void prepare_uniform_buffers();
 	void update_uniform_buffers();
@@ -127,8 +158,13 @@ class LogicOpDynamicState : public ApiVulkanSample
 	void setup_descriptor_set_layout();
 	void create_descriptor_sets();
 
+	glm::vec4 get_changed_alpha(const vkb::sg::PBRMaterial *original_mat);
+	void      scene_pipeline_divide(std::vector<SceneNode> const &scene_node);
+
 	void model_data_creation();
-	//void draw_created_model(VkCommandBuffer commandBuffer);
+	void draw_created_model(VkCommandBuffer commandBuffer);
+	void      cube_animation(float delta_time);
+	
 	void on_update_ui_overlay(vkb::Drawer &drawer);
 
 	//?
