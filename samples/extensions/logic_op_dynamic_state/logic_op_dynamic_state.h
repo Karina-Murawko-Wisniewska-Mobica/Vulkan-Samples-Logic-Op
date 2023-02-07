@@ -17,6 +17,10 @@
 
 #pragma once
 
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "api_vulkan_sample.h"
 #include "scene_graph/components/pbr_material.h"
 
@@ -109,8 +113,6 @@ class LogicOpDynamicState : public ApiVulkanSample
 		vkb::sg::Node *   node;
 		vkb::sg::SubMesh *sub_mesh;
 	};
-	std::vector<SceneNode> scene_elements_baseline;
-	std::vector<SceneNode> scene_elements_tess;
 
 	std::unique_ptr<vkb::sg::SubMesh> background_model;
 
@@ -121,7 +123,6 @@ class LogicOpDynamicState : public ApiVulkanSample
 		std::unique_ptr<vkb::core::Buffer> indices;
 		uint32_t                           index_count;
 	} cube;
-
 
 	//struct
 	//{
@@ -134,19 +135,19 @@ class LogicOpDynamicState : public ApiVulkanSample
 		bool                           tessellation = false;
 		float                          tess_factor  = 1.0f;
 		std::vector<ModelDynamicParam> objects;
-		int                            selected_obj     = 0;
-		bool                           selection_active = true;
-		bool                           time_tick        = false;
+		int                            selected_obj      = 0;
+		bool                           selection_active  = true;
+		bool                           time_tick         = false;
+		int                            selectd_operation = 0;
 	} gui_settings;
 
 	LogicOpDynamicState();
-	virtual ~LogicOpDynamicState();
+	~LogicOpDynamicState();
 
-	virtual bool prepare(vkb::Platform &platform) override;
-	virtual void render(float delta_time) override;
-	virtual void build_command_buffers() override;
-	virtual void request_gpu_features(vkb::PhysicalDevice &gpu) override;
-	virtual void update(float delta_time) override;
+	bool prepare(vkb::Platform &platform) override;
+	void render(float delta_time) override;
+	void build_command_buffers() override;
+	void request_gpu_features(vkb::PhysicalDevice &gpu) override;
 
 	void prepare_uniform_buffers();
 	void update_uniform_buffers();
@@ -158,20 +159,16 @@ class LogicOpDynamicState : public ApiVulkanSample
 	void setup_descriptor_set_layout();
 	void create_descriptor_sets();
 
-	glm::vec4 get_changed_alpha(const vkb::sg::PBRMaterial *original_mat);
-	void      scene_pipeline_divide(std::vector<SceneNode> const &scene_node);
-
 	void model_data_creation();
 	void draw_created_model(VkCommandBuffer commandBuffer);
-	void      cube_animation(float delta_time);
-	
+
 	void on_update_ui_overlay(vkb::Drawer &drawer);
 
 	//?
 	void draw_from_scene(VkCommandBuffer command_buffer, std::vector<SceneNode> const &scene_node);
 
   protected:
-	virtual void create_render_context(vkb::Platform &platform) override;
+	void create_render_context(vkb::Platform &platform) override;
 };
 
 std::unique_ptr<vkb::VulkanSample> create_logic_op_dynamic_state();

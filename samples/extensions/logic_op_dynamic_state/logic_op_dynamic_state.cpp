@@ -15,20 +15,16 @@
  * limitations under the License.
  */
 
-#include "logic_op_dynamic_state.h"
+#include <string>
+#include <vector>
+#include <memory>
 
-//#include "common/vk_common.h"
-//#include "gltf_loader.h"
-//#include "gui.h"
-//#include "platform/filesystem.h"
-//#include "platform/platform.h"
-//#include "rendering/subpasses/forward_subpass.h"
-//#include "stats/stats.h"
+#include "logic_op_dynamic_state.h"
 
 #include "gltf_loader.h"
 #include "scene_graph/components/mesh.h"
 #include "scene_graph/components/sub_mesh.h"
-//#include "scene_graph/components/pbr_material.h"
+#include "scene_graph/components/pbr_material.h"
 
 LogicOpDynamicState::LogicOpDynamicState()
 {
@@ -43,21 +39,6 @@ LogicOpDynamicState::~LogicOpDynamicState()
 {
 	if (device)
 	{
-		////vkDestroySampler(get_device().get_handle(), textures.envmap.sampler, VK_NULL_HANDLE);
-		//textures = {};
-		//background_model.reset();
-		//model.reset();
-		//ubo.reset();
-		//		
-		//vkDestroyPipeline(get_device().get_handle(), pipeline.background, VK_NULL_HANDLE);
-		//vkDestroyPipeline(get_device().get_handle(), pipeline.model, VK_NULL_HANDLE);
-		//
-		//vkDestroyPipelineLayout(get_device().get_handle(), pipeline_layouts.background, VK_NULL_HANDLE);
-		//vkDestroyPipelineLayout(get_device().get_handle(), pipeline_layouts.model, VK_NULL_HANDLE);
-
-		//vkDestroyDescriptorSetLayout(get_device().get_handle(), descriptor_set_layouts.model, VK_NULL_HANDLE);
-		//vkDestroyDescriptorSetLayout(get_device().get_handle(), descriptor_set_layouts.background, VK_NULL_HANDLE);
-
 		uniform_buffers.common.reset();
 		uniform_buffers.baseline.reset();
 		uniform_buffers.tesselation.reset();
@@ -65,16 +46,14 @@ LogicOpDynamicState::~LogicOpDynamicState()
 		vkDestroySampler(get_device().get_handle(), textures.envmap.sampler, VK_NULL_HANDLE);
 		textures = {};
 
-		vkDestroyPipeline(get_device().get_handle(), pipeline.tesselation, VK_NULL_HANDLE);
 		vkDestroyPipeline(get_device().get_handle(), pipeline.baseline, VK_NULL_HANDLE);
 		vkDestroyPipeline(get_device().get_handle(), pipeline.background, VK_NULL_HANDLE);
-		vkDestroyPipelineLayout(get_device().get_handle(), pipeline_layouts.tesselation, VK_NULL_HANDLE);
+
 		vkDestroyPipelineLayout(get_device().get_handle(), pipeline_layouts.baseline, VK_NULL_HANDLE);
 		vkDestroyPipelineLayout(get_device().get_handle(), pipeline_layouts.background, VK_NULL_HANDLE);
-		vkDestroyDescriptorSetLayout(get_device().get_handle(), descriptor_set_layouts.tesselation, VK_NULL_HANDLE);
+
 		vkDestroyDescriptorSetLayout(get_device().get_handle(), descriptor_set_layouts.baseline, VK_NULL_HANDLE);
 		vkDestroyDescriptorSetLayout(get_device().get_handle(), descriptor_set_layouts.background, VK_NULL_HANDLE);
-		//vkDestroyDescriptorPool(get_device().get_handle(), descriptor_pool, VK_NULL_HANDLE);
 	}
 }
 
@@ -98,7 +77,7 @@ bool LogicOpDynamicState::prepare(vkb::Platform &platform)
 	camera.set_perspective(60.0f, static_cast<float>(width) / static_cast<float>(height), 256.0f, 0.1f);
 
 	load_assets();
-	model_data_creation(); //R
+	model_data_creation();        //R
 	prepare_uniform_buffers();
 	create_descriptor_pool();
 
@@ -108,12 +87,7 @@ bool LogicOpDynamicState::prepare(vkb::Platform &platform)
 	create_pipeline();
 	build_command_buffers();
 
-	// Add a GUI with the stats you want to monitor
-	// TODO uncomment: currently it crashes
-	// stats->request_stats({/*stats you require*/});
-	// gui = std::make_unique<vkb::Gui>(*this, platform.get_window(), stats.get());
-
-	prepared = true; //R?
+	prepared = true;
 	return true;
 }
 
@@ -121,9 +95,9 @@ void LogicOpDynamicState::create_render_context(vkb::Platform &platform)
 {
 	// We always want an sRGB surface to match the display.
 	// If we used a UNORM surface, we'd have to do the conversion to sRGB ourselves at the end of our fragment shaders.
-	auto surface_priority_list = std::vector<VkSurfaceFormatKHR>{{VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR},
-	                                                             {VK_FORMAT_R8G8B8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR}};
-
+	auto surface_priority_list = std::vector<VkSurfaceFormatKHR>{
+	    {VK_FORMAT_B8G8R8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR},
+	};
 	render_context = platform.create_render_context(*device.get(), surface, surface_priority_list);
 }
 
@@ -151,6 +125,8 @@ void LogicOpDynamicState::render(float delta_time)
 void LogicOpDynamicState::build_command_buffers()
 {
 	std::array<VkClearValue, 2> clear_values{};
+	//clear_values[0].color = {{0.5f, 0.25f, 1.0f, 1.0f}};
+ 	//   clear_values[0].color = {{0.95f, 0.95f, 1.0f, 1.0f}};
 	clear_values[0].color        = {{0.0f, 0.0f, 0.0f, 0.0f}};
 	clear_values[1].depthStencil = {0.0f, 0};
 
@@ -160,7 +136,7 @@ void LogicOpDynamicState::build_command_buffers()
 	int i = -1; /* Required for accessing element in framebuffers vector */
 	for (auto &draw_cmd_buffer : draw_cmd_buffers)
 	{
-		i++;
+		++i;
 		auto command_begin = vkb::initializers::command_buffer_begin_info();
 		VK_CHECK(vkBeginCommandBuffer(draw_cmd_buffer, &command_begin));
 
@@ -180,42 +156,38 @@ void LogicOpDynamicState::build_command_buffers()
 		VkRect2D scissor = vkb::initializers::rect2D(static_cast<int>(width), static_cast<int>(height), 0, 0);
 		vkCmdSetScissor(draw_cmd_buffer, 0, 1, &scissor);
 
-		/* Binding baseline pipeline and descriptor sets */
-		vkCmdBindDescriptorSets(draw_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layouts.baseline, 0, 1, &descriptor_sets.baseline, 0, nullptr);
-		vkCmdBindPipeline(draw_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.baseline);
+		/* Binding background pipeline and descriptor sets  */
+		vkCmdBindDescriptorSets(draw_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layouts.background, 0, 1, &descriptor_sets.background, 0, VK_NULL_HANDLE);
+		vkCmdBindPipeline(draw_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.background);
 
 		/* Setting topology to triangle list and disabling primitive restart functionality */
 		vkCmdSetPrimitiveTopologyEXT(draw_cmd_buffer, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 		vkCmdSetPrimitiveRestartEnableEXT(draw_cmd_buffer, VK_FALSE);
 
-		/* Drawing objects from baseline scene (with rasterizer discard and depth bias functionality) */
-		draw_from_scene(draw_cmd_buffer, scene_elements_baseline);
+		//vkCmdSetLogicOpEXT(draw_cmd_buffer, logic_op);        //TODO check the command
+		/* Drawing background */
+		draw_model(background_model, draw_cmd_buffer);
+
+
+		/* Binding baseline pipeline and descriptor sets */
+		vkCmdBindDescriptorSets(draw_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layouts.baseline, 0, 1, &descriptor_sets.baseline, 0, VK_NULL_HANDLE);
+		vkCmdBindPipeline(draw_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.baseline);
+
+		/* Setting topology to triangle list and disabling primitive restart functionality */
+		/*vkCmdSetPrimitiveTopologyEXT(draw_cmd_buffer, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+		vkCmdSetPrimitiveRestartEnableEXT(draw_cmd_buffer, VK_FALSE);*/
+
+		//VkLogicOp logic_op = VK_LOGIC_OP_CLEAR;
+		//vkCmdSetLogicOpEXT(draw_cmd_buffer, logic_op);        //TODO check the command
 
 		/* Changing topology to triangle strip with using primitive restart feature */
 		vkCmdSetPrimitiveTopologyEXT(draw_cmd_buffer, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
 		vkCmdSetPrimitiveRestartEnableEXT(draw_cmd_buffer, VK_TRUE);
-
+		
+		//vkCmdSetLogicOpEXT(draw_cmd_buffer, logic_op);        //TODO check the command
 		/* Draw model with primitive restart functionality */
 		draw_created_model(draw_cmd_buffer);
-
-		/* Changing bindings to tessellation pipeline */
-		vkCmdBindDescriptorSets(draw_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layouts.tesselation, 0, 1, &descriptor_sets.tesselation, 0, nullptr);
-		vkCmdBindPipeline(draw_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.tesselation);
-
-		/* Change topology to patch list and setting patch control points value */
-		vkCmdSetPrimitiveTopologyEXT(draw_cmd_buffer, VK_PRIMITIVE_TOPOLOGY_PATCH_LIST);
-		vkCmdSetPatchControlPointsEXT(draw_cmd_buffer, patch_control_points_triangle);
-
-		/* Drawing scene with objects using tessellation feature */
-		draw_from_scene(draw_cmd_buffer, scene_elements_tess);
-
-		/* Changing bindings to background pipeline */
-		vkCmdBindDescriptorSets(draw_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layouts.background, 0, 1, &descriptor_sets.background, 0, nullptr);
-		vkCmdBindPipeline(draw_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.background);
-
-		/* Drawing background */
-		draw_model(background_model, draw_cmd_buffer);
-
+		
 		/* UI */
 		draw_ui(draw_cmd_buffer);
 
@@ -231,75 +203,34 @@ void LogicOpDynamicState::build_command_buffers()
  */
 void LogicOpDynamicState::request_gpu_features(vkb::PhysicalDevice &gpu)
 {
-	///* Enable extension features required by this sample
-	//   These are passed to device creation via a pNext structure chain */
-	//auto &requested_extended_dynamic_state2_features                        = gpu.request_extension_features<VkPhysicalDeviceExtendedDynamicState2FeaturesEXT>(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_2_FEATURES_EXT);
-	//requested_extended_dynamic_state2_features.extendedDynamicState2        = VK_TRUE;
+	/* Enable extension features required by this sample
+	   These are passed to device creation via a pNext structure chain */
+	auto &requested_extended_dynamic_state2_features =
+	    gpu.request_extension_features<VkPhysicalDeviceExtendedDynamicState2FeaturesEXT>(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_2_FEATURES_EXT);
+	requested_extended_dynamic_state2_features.extendedDynamicState2        = VK_TRUE;
+	requested_extended_dynamic_state2_features.extendedDynamicState2LogicOp = VK_TRUE;
 	//requested_extended_dynamic_state2_features.extendedDynamicState2LogicOp = VK_TRUE;
 
-	//auto &requested_extended_dynamic_state_feature                = gpu.request_extension_features<VkPhysicalDeviceExtendedDynamicStateFeaturesEXT>(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT);
-	//requested_extended_dynamic_state_feature.extendedDynamicState = VK_TRUE;
-
-	//if (gpu.get_features().samplerAnisotropy)
-	//{
-	//	gpu.get_mutable_requested_features().samplerAnisotropy = VK_TRUE;
-	//}
-
-		/* Enable extension features required by this sample
-	   These are passed to device creation via a pNext structure chain */
-	auto &requested_extended_dynamic_state2_features                                   = gpu.request_extension_features<VkPhysicalDeviceExtendedDynamicState2FeaturesEXT>(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_2_FEATURES_EXT);
-	requested_extended_dynamic_state2_features.extendedDynamicState2                   = VK_TRUE;
-	requested_extended_dynamic_state2_features.extendedDynamicState2PatchControlPoints = VK_TRUE;
-
-	auto &requested_extended_dynamic_state_feature                = gpu.request_extension_features<VkPhysicalDeviceExtendedDynamicStateFeaturesEXT>(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT);
+	auto &requested_extended_dynamic_state_feature =
+	    gpu.request_extension_features<VkPhysicalDeviceExtendedDynamicStateFeaturesEXT>(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT);
 	requested_extended_dynamic_state_feature.extendedDynamicState = VK_TRUE;
-
-	// Tessellation shader support is required for this example
-	auto &requested_features = gpu.get_mutable_requested_features();
-	if (gpu.get_features().tessellationShader)
-	{
-		requested_features.tessellationShader = VK_TRUE;
-	}
-	else
-	{
-		throw vkb::VulkanException(VK_ERROR_FEATURE_NOT_PRESENT, "Selected GPU does not support tessellation shaders!");
-	}
-
-	if (gpu.get_features().fillModeNonSolid)
-	{
-		requested_features.fillModeNonSolid = VK_TRUE;
-	}
 
 	if (gpu.get_features().samplerAnisotropy)
 	{
-		gpu.get_mutable_requested_features().samplerAnisotropy = true;
+		gpu.get_mutable_requested_features().samplerAnisotropy = VK_TRUE;
 	}
 }
 
 void LogicOpDynamicState::prepare_uniform_buffers()
 {
-	//uniform_buffers.model = std::make_unique<vkb::core::Buffer>(get_device(), sizeof(ubo_model), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-	//uniform_buffers.background  = std::make_unique<vkb::core::Buffer>(get_device(), sizeof(ubo_background), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-	
-	uniform_buffers.common      = std::make_unique<vkb::core::Buffer>(get_device(), sizeof(ubo_common), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-	uniform_buffers.baseline    = std::make_unique<vkb::core::Buffer>(get_device(), sizeof(ubo_baseline), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-	uniform_buffers.tesselation = std::make_unique<vkb::core::Buffer>(get_device(), sizeof(ubo_tess), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+	uniform_buffers.common   = std::make_unique<vkb::core::Buffer>(get_device(), sizeof(ubo_common), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+	uniform_buffers.baseline = std::make_unique<vkb::core::Buffer>(get_device(), sizeof(ubo_baseline), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
 	update_uniform_buffers();
 }
 
 void LogicOpDynamicState::update_uniform_buffers()
 {
-	///* Baseline uniform buffer */
-	//ubo_model.projection = camera.matrices.perspective;
-	//ubo_model.view       = camera.matrices.view;
-	//uniform_buffers.model->convert_and_update(ubo_model);
-
-	///* Background uniform buffer */
-	//ubo_background.projection           = camera.matrices.perspective;
-	//ubo_background.background_modelview = camera.matrices.view;
-
-	//uniform_buffers.background->convert_and_update(ubo_background);
-
 	/* Common uniform buffer */
 	ubo_common.projection = camera.matrices.perspective;
 	ubo_common.view       = camera.matrices.view;
@@ -307,16 +238,6 @@ void LogicOpDynamicState::update_uniform_buffers()
 
 	/* Baseline uniform buffer */
 	uniform_buffers.baseline->convert_and_update(ubo_baseline);
-
-	/* Tessellation uniform buffer */
-	ubo_tess.tessellation_factor = gui_settings.tess_factor;
-
-	if (!gui_settings.tessellation)
-	{
-		// Setting this to zero sets all tessellation factors to 1.0 in the shader
-		ubo_tess.tessellation_factor = 0.0f;
-	}
-	uniform_buffers.tesselation->convert_and_update(ubo_tess);
 }
 
 void LogicOpDynamicState::create_pipeline()
@@ -341,7 +262,7 @@ void LogicOpDynamicState::create_pipeline()
 	VkPipelineColorBlendAttachmentState blend_attachment_state =
 	    vkb::initializers::pipeline_color_blend_attachment_state(
 	        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
-	        VK_TRUE);
+	        VK_TRUE); //?? FALSE
 
 	blend_attachment_state.colorBlendOp        = VK_BLEND_OP_ADD;
 	blend_attachment_state.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
@@ -354,6 +275,10 @@ void LogicOpDynamicState::create_pipeline()
 	    vkb::initializers::pipeline_color_blend_state_create_info(
 	        1,
 	        &blend_attachment_state);
+
+	color_blend_state.logicOpEnable = VK_TRUE;
+	color_blend_state.logicOp = VK_LOGIC_OP_AND;
+	
 
 	/* Note: Using Reversed depth-buffer for increased precision, so Greater depth values are kept */
 	VkPipelineDepthStencilStateCreateInfo depth_stencil_state =
@@ -369,22 +294,11 @@ void LogicOpDynamicState::create_pipeline()
 	    vkb::initializers::pipeline_multisample_state_create_info(
 	        VK_SAMPLE_COUNT_1_BIT,
 	        0);
-	VkPipelineTessellationStateCreateInfo tessellation_state =
-	    vkb::initializers::pipeline_tessellation_state_create_info(3); //R
-
-	//std::vector<VkDynamicState> dynamic_state_enables = {
-	//    VK_DYNAMIC_STATE_VIEWPORT,
-	//    VK_DYNAMIC_STATE_SCISSOR,
-	//    VK_DYNAMIC_STATE_LOGIC_OP_EXT
-	//};
 
 	std::vector<VkDynamicState> dynamic_state_enables = {
 	    VK_DYNAMIC_STATE_VIEWPORT,
 	    VK_DYNAMIC_STATE_SCISSOR,
-	    VK_DYNAMIC_STATE_PRIMITIVE_TOPOLOGY_EXT,
-	    VK_DYNAMIC_STATE_DEPTH_BIAS_ENABLE_EXT,
-	    VK_DYNAMIC_STATE_RASTERIZER_DISCARD_ENABLE_EXT,
-	    VK_DYNAMIC_STATE_PRIMITIVE_RESTART_ENABLE_EXT,
+	    //VK_DYNAMIC_STATE_LOGIC_OP_EXT,
 	};
 	VkPipelineDynamicStateCreateInfo dynamic_state =
 	    vkb::initializers::pipeline_dynamic_state_create_info(
@@ -395,8 +309,7 @@ void LogicOpDynamicState::create_pipeline()
 	/* Binding description */
 	std::vector<VkVertexInputBindingDescription> vertex_input_bindings = {
 	    vkb::initializers::vertex_input_binding_description(0, sizeof(glm::vec3), VK_VERTEX_INPUT_RATE_VERTEX),
-	    vkb::initializers::vertex_input_binding_description(1, sizeof(glm::vec3), VK_VERTEX_INPUT_RATE_VERTEX)
-	};
+	    vkb::initializers::vertex_input_binding_description(1, sizeof(glm::vec3), VK_VERTEX_INPUT_RATE_VERTEX)};
 
 	/* Attribute descriptions */
 	std::vector<VkVertexInputAttributeDescription> vertex_input_attributes = {
@@ -423,9 +336,6 @@ void LogicOpDynamicState::create_pipeline()
 	shader_stages[0] = load_shader("logic_op_dynamic_state/baseline.vert", VK_SHADER_STAGE_VERTEX_BIT);
 	shader_stages[1] = load_shader("logic_op_dynamic_state/baseline.frag", VK_SHADER_STAGE_FRAGMENT_BIT);
 C:
-	//\GitHub\Vulkan - Samples - Logic - Op\shaders\logic_op_dynamic_state\extended_dynamic_state2
-
-	/* Use the pNext to point to the rendering create struct */
 	/* Use the pNext to point to the rendering create struct */
 	VkGraphicsPipelineCreateInfo graphics_create{VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
 	graphics_create.pNext               = VK_NULL_HANDLE;
@@ -449,11 +359,16 @@ C:
 	VK_CHECK(vkCreateGraphicsPipelines(get_device().get_handle(), pipeline_cache, 1, &graphics_create, VK_NULL_HANDLE, &pipeline.baseline));
 
 	/* Setup for second pipeline */
+	//
+	
+	color_blend_state.logicOpEnable = VK_FALSE;
+
 	graphics_create.layout = pipeline_layouts.background;
 
 	std::vector<VkDynamicState> dynamic_state_enables_background = {
 	    VK_DYNAMIC_STATE_VIEWPORT,
 	    VK_DYNAMIC_STATE_SCISSOR,
+	    //VK_DYNAMIC_STATE_LOGIC_OP_EXT,
 	};
 	dynamic_state.pDynamicStates    = dynamic_state_enables_background.data();
 	dynamic_state.dynamicStateCount = static_cast<uint32_t>(dynamic_state_enables_background.size());
@@ -480,39 +395,6 @@ C:
 	shader_stages[1] = load_shader("logic_op_dynamic_state/background.frag", VK_SHADER_STAGE_FRAGMENT_BIT);
 
 	VK_CHECK(vkCreateGraphicsPipelines(get_device().get_handle(), pipeline_cache, 1, &graphics_create, VK_NULL_HANDLE, &pipeline.background));
-
-	/* Setup for third pipeline */
-	graphics_create.pTessellationState = &tessellation_state;
-	graphics_create.layout             = pipeline_layouts.tesselation;
-	input_assembly_state.topology      = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
-
-	dynamic_state_enables.push_back(VK_DYNAMIC_STATE_PATCH_CONTROL_POINTS_EXT);
-	dynamic_state.pDynamicStates    = dynamic_state_enables.data();
-	dynamic_state.dynamicStateCount = static_cast<uint32_t>(dynamic_state_enables.size());
-
-	vertex_input_state.vertexBindingDescriptionCount   = static_cast<uint32_t>(vertex_input_bindings.size());
-	vertex_input_state.pVertexBindingDescriptions      = vertex_input_bindings.data();
-	vertex_input_state.vertexAttributeDescriptionCount = static_cast<uint32_t>(vertex_input_attributes.size());
-	vertex_input_state.pVertexAttributeDescriptions    = vertex_input_attributes.data();
-
-	/* Wireframe mode */
-	if (get_device().get_gpu().get_features().fillModeNonSolid)
-	{
-		rasterization_state.polygonMode = VK_POLYGON_MODE_LINE;
-	}
-
-	shader_stages[0]           = load_shader("logic_op_dynamic_state/tess.vert", VK_SHADER_STAGE_VERTEX_BIT);
-	shader_stages[1]           = load_shader("logic_op_dynamic_state/tess.frag", VK_SHADER_STAGE_FRAGMENT_BIT);
-	shader_stages[2]           = load_shader("logic_op_dynamic_state/tess.tesc", VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT);
-	shader_stages[3]           = load_shader("logic_op_dynamic_state/tess.tese", VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
-	graphics_create.stageCount = static_cast<uint32_t>(shader_stages.size());
-	graphics_create.pStages    = shader_stages.data();
-	/* Enable depth test and write */
-	depth_stencil_state.depthWriteEnable = VK_TRUE;
-	depth_stencil_state.depthTestEnable  = VK_TRUE;
-	/* Flip cull mode */
-	rasterization_state.cullMode = VK_CULL_MODE_FRONT_BIT;
-	VK_CHECK(vkCreateGraphicsPipelines(get_device().get_handle(), pipeline_cache, 1, &graphics_create, VK_NULL_HANDLE, &pipeline.tesselation));
 }
 
 /**
@@ -553,8 +435,6 @@ void LogicOpDynamicState::load_assets()
 			}
 		}
 	}
-	/* Split scene */
-	scene_pipeline_divide(scene_elements);
 
 	background_model = load_model("scenes/cube.gltf");
 	/* Load HDR cube map */
@@ -564,13 +444,14 @@ void LogicOpDynamicState::load_assets()
 //TODO
 void LogicOpDynamicState::create_descriptor_pool()
 {
-	constexpr uint32_t num_descriptor_sets = 3;
+	//constexpr uint32_t num_descriptor_sets = 3;
+	constexpr uint32_t num_descriptor_sets = 2;
 
 	std::vector<VkDescriptorPoolSize> pool_sizes = {
-        vkb::initializers::descriptor_pool_size(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, num_descriptor_sets),
+	    vkb::initializers::descriptor_pool_size(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, num_descriptor_sets),
 	    vkb::initializers::descriptor_pool_size(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
 	};
-	
+
 	VkDescriptorPoolCreateInfo descriptor_pool_create_info =
 	    vkb::initializers::descriptor_pool_create_info(
 	        static_cast<uint32_t>(pool_sizes.size()),
@@ -597,7 +478,7 @@ void LogicOpDynamicState::setup_descriptor_set_layout()
 	VkDescriptorSetLayoutCreateInfo descriptor_layout_create_info =
 	    vkb::initializers::descriptor_set_layout_create_info(set_layout_bindings.data(), static_cast<uint32_t>(set_layout_bindings.size()));
 
-	VK_CHECK(vkCreateDescriptorSetLayout(get_device().get_handle(), &descriptor_layout_create_info, nullptr, &descriptor_set_layouts.baseline));
+	VK_CHECK(vkCreateDescriptorSetLayout(get_device().get_handle(), &descriptor_layout_create_info, VK_NULL_HANDLE, &descriptor_set_layouts.baseline));
 
 	VkPipelineLayoutCreateInfo pipeline_layout_create_info =
 	    vkb::initializers::pipeline_layout_create_info(
@@ -609,30 +490,9 @@ void LogicOpDynamicState::setup_descriptor_set_layout()
 	pipeline_layout_create_info.pushConstantRangeCount = 1;
 	pipeline_layout_create_info.pPushConstantRanges    = &push_constant_range;
 
-	VK_CHECK(vkCreatePipelineLayout(get_device().get_handle(), &pipeline_layout_create_info, nullptr, &pipeline_layouts.baseline));
+	VK_CHECK(vkCreatePipelineLayout(get_device().get_handle(), &pipeline_layout_create_info, VK_NULL_HANDLE, &pipeline_layouts.baseline));
 
 	/* Second descriptor set */
-	set_layout_bindings = {
-	    vkb::initializers::descriptor_set_layout_binding(
-	        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-	        VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT | VK_SHADER_STAGE_VERTEX_BIT,
-	        0),
-	    vkb::initializers::descriptor_set_layout_binding(
-	        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-	        VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT,
-	        1),
-	};
-
-	descriptor_layout_create_info.pBindings    = set_layout_bindings.data();
-	descriptor_layout_create_info.bindingCount = static_cast<uint32_t>(set_layout_bindings.size());
-	VK_CHECK(vkCreateDescriptorSetLayout(get_device().get_handle(), &descriptor_layout_create_info, nullptr, &descriptor_set_layouts.tesselation));
-
-	pipeline_layout_create_info.pSetLayouts    = &descriptor_set_layouts.tesselation;
-	pipeline_layout_create_info.setLayoutCount = 1;
-	push_constant_range.stageFlags             = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
-	VK_CHECK(vkCreatePipelineLayout(get_device().get_handle(), &pipeline_layout_create_info, nullptr, &pipeline_layouts.tesselation));
-
-	/* Third descriptor set */
 	set_layout_bindings = {
 	    vkb::initializers::descriptor_set_layout_binding(
 	        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -646,13 +506,13 @@ void LogicOpDynamicState::setup_descriptor_set_layout()
 
 	descriptor_layout_create_info.pBindings    = set_layout_bindings.data();
 	descriptor_layout_create_info.bindingCount = static_cast<uint32_t>(set_layout_bindings.size());
-	VK_CHECK(vkCreateDescriptorSetLayout(get_device().get_handle(), &descriptor_layout_create_info, nullptr, &descriptor_set_layouts.background));
+	VK_CHECK(vkCreateDescriptorSetLayout(get_device().get_handle(), &descriptor_layout_create_info, VK_NULL_HANDLE, &descriptor_set_layouts.background));
 
 	pipeline_layout_create_info.pSetLayouts            = &descriptor_set_layouts.background;
 	pipeline_layout_create_info.setLayoutCount         = 1;
 	pipeline_layout_create_info.pushConstantRangeCount = 0;
 	pipeline_layout_create_info.pPushConstantRanges    = VK_NULL_HANDLE;
-	VK_CHECK(vkCreatePipelineLayout(get_device().get_handle(), &pipeline_layout_create_info, nullptr, &pipeline_layouts.background));
+	VK_CHECK(vkCreatePipelineLayout(get_device().get_handle(), &pipeline_layout_create_info, VK_NULL_HANDLE, &pipeline_layouts.background));
 }
 
 void LogicOpDynamicState::create_descriptor_sets()
@@ -688,32 +548,6 @@ void LogicOpDynamicState::create_descriptor_sets()
 	alloc_info =
 	    vkb::initializers::descriptor_set_allocate_info(
 	        descriptor_pool,
-	        &descriptor_set_layouts.tesselation,
-	        1);
-
-	VK_CHECK(vkAllocateDescriptorSets(get_device().get_handle(), &alloc_info, &descriptor_sets.tesselation));
-
-	VkDescriptorBufferInfo matrix_tess_buffer_descriptor = create_descriptor(*uniform_buffers.tesselation);
-
-	write_descriptor_sets = {
-	    vkb::initializers::write_descriptor_set(
-	        descriptor_sets.tesselation,
-	        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-	        0,
-	        &matrix_common_buffer_descriptor),
-	    vkb::initializers::write_descriptor_set(
-	        descriptor_sets.tesselation,
-	        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-	        1,
-	        &matrix_tess_buffer_descriptor)};
-
-	vkUpdateDescriptorSets(get_device().get_handle(), static_cast<uint32_t>(write_descriptor_sets.size()),
-	                       write_descriptor_sets.data(), 0, VK_NULL_HANDLE);
-
-	/* Third descriptor set */
-	alloc_info =
-	    vkb::initializers::descriptor_set_allocate_info(
-	        descriptor_pool,
 	        &descriptor_set_layouts.background,
 	        1);
 
@@ -743,7 +577,7 @@ void LogicOpDynamicState::create_descriptor_sets()
  */
 void LogicOpDynamicState::draw_from_scene(VkCommandBuffer command_buffer, std::vector<SceneNode> const &scene_node)
 {
-	//for (int i = 0; i < scene_node.size(); i++)
+	//for (int i = 0; i < scene_node.size(); ++i)
 	//{
 	//	const auto &vertex_buffer_pos    = scene_node[i].sub_mesh->vertex_buffers.at("position");
 	//	const auto &vertex_buffer_normal = scene_node[i].sub_mesh->vertex_buffers.at("normal");
@@ -778,7 +612,7 @@ void LogicOpDynamicState::draw_from_scene(VkCommandBuffer command_buffer, std::v
 	//vkCmdSetDepthBiasEnableEXT(command_buffer, VK_FALSE);
 	//vkCmdSetRasterizerDiscardEnableEXT(command_buffer, VK_FALSE);
 
-	for (int i = 0; i < scene_node.size(); i++)
+	for (int i = 0; i < scene_node.size(); ++i)
 	{
 		const auto &vertex_buffer_pos    = scene_node[i].sub_mesh->vertex_buffers.at("position");
 		const auto &vertex_buffer_normal = scene_node[i].sub_mesh->vertex_buffers.at("normal");
@@ -793,14 +627,14 @@ void LogicOpDynamicState::draw_from_scene(VkCommandBuffer command_buffer, std::v
 		/* Pass data for the current node via push commands */
 		auto node_material            = dynamic_cast<const vkb::sg::PBRMaterial *>(scene_node[i].sub_mesh->get_material());
 		push_const_block.model_matrix = scene_node[i].node->get_transform().get_world_matrix();
-		if (gui_settings.selection_active && i == gui_settings.selected_obj)
+		/*	if (gui_settings.selection_active && i == gui_settings.selected_obj)
 		{
 			push_const_block.color = get_changed_alpha(node_material);
 		}
 		else
-		{
-			push_const_block.color = node_material->base_color_factor;
-		}
+		{*/
+		push_const_block.color = node_material->base_color_factor;
+		//}
 		vkCmdPushConstants(command_buffer, pipeline_layouts.baseline, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(push_const_block), &push_const_block);
 
 		VkDeviceSize offsets[1] = {0};
@@ -816,7 +650,7 @@ void LogicOpDynamicState::draw_from_scene(VkCommandBuffer command_buffer, std::v
 
 void LogicOpDynamicState::model_data_creation()
 {
-// Probably to remove
+	// Probably to remove
 
 	constexpr uint32_t vertex_count = 8;
 
@@ -851,10 +685,10 @@ void LogicOpDynamicState::model_data_creation()
 	vertices_norm[7] = glm::normalize(Xm + Yp + Zp);
 
 	/* Scaling and position transform */
-	for (uint8_t i = 0; i < vertex_count; i++)
+	for (uint8_t i = 0; i < vertex_count; ++i)
 	{
-		vertices_pos[i] *= glm::vec3(4.0f, 4.0f, 4.0f);
-		vertices_pos[i] += glm::vec3(15.0f, 2.0f, 0.0f);
+		vertices_pos[i] *= glm::vec3(7.0f, 7.0f, 7.0f);
+		vertices_pos[i] += glm::vec3(0.0f, 1.0f, 5.0f);
 	}
 
 	constexpr uint32_t index_count        = 29;
@@ -947,12 +781,12 @@ void LogicOpDynamicState::model_data_creation()
 
 	device->flush_command_buffer(copy_command, queue, true);
 
-	vkDestroyBuffer(get_device().get_handle(), vertex_pos_staging.buffer, nullptr);
-	vkFreeMemory(get_device().get_handle(), vertex_pos_staging.memory, nullptr);
-	vkDestroyBuffer(get_device().get_handle(), vertex_norm_staging.buffer, nullptr);
-	vkFreeMemory(get_device().get_handle(), vertex_norm_staging.memory, nullptr);
-	vkDestroyBuffer(get_device().get_handle(), index_staging.buffer, nullptr);
-	vkFreeMemory(get_device().get_handle(), index_staging.memory, nullptr);
+	vkDestroyBuffer(get_device().get_handle(), vertex_pos_staging.buffer, VK_NULL_HANDLE);
+	vkFreeMemory(get_device().get_handle(), vertex_pos_staging.memory, VK_NULL_HANDLE);
+	vkDestroyBuffer(get_device().get_handle(), vertex_norm_staging.buffer, VK_NULL_HANDLE);
+	vkFreeMemory(get_device().get_handle(), vertex_norm_staging.memory, VK_NULL_HANDLE);
+	vkDestroyBuffer(get_device().get_handle(), index_staging.buffer, VK_NULL_HANDLE);
+	vkFreeMemory(get_device().get_handle(), index_staging.memory, VK_NULL_HANDLE);
 }
 
 void LogicOpDynamicState::draw_created_model(VkCommandBuffer commandBuffer)
@@ -960,7 +794,8 @@ void LogicOpDynamicState::draw_created_model(VkCommandBuffer commandBuffer)
 	//Probably to remove
 
 	VkDeviceSize offsets[1] = {0};
-	push_const_block.color  = glm::vec4{0.5f, 1.0f, 1.0f, 1.0f};
+	//push_const_block.color  = glm::vec4{0.5f, 1.0f, 1.0f, 1.0f};
+	push_const_block.color  = glm::vec4{0.75f, 1.0f, 1.0f, 1.0f};
 	vkCmdPushConstants(commandBuffer, pipeline_layouts.baseline, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(push_const_block), &push_const_block);
 	vkCmdBindVertexBuffers(commandBuffer, 0, 1, cube.vertices_pos->get(), offsets);
 	vkCmdBindVertexBuffers(commandBuffer, 1, 1, cube.vertices_norm->get(), offsets);
@@ -969,175 +804,26 @@ void LogicOpDynamicState::draw_created_model(VkCommandBuffer commandBuffer)
 }
 
 /**
- * @fn void LogicOpDynamicState::cube_animation(float delta_time)
- * @brief Changing position of one z-fighting cube (visualize negative phenomenon z-fighting)
- */
-void LogicOpDynamicState::cube_animation(float delta_time)
-{
-	constexpr float tick_limit = 0.05;
-	constexpr float delta      = 0.05;
-	constexpr float move_step  = 0.0005;
-	static float    time_pass  = 0;
-	time_pass += delta_time;
-	static auto &transform = std::find_if(scene_elements_baseline.begin(),
-	                                      scene_elements_baseline.end(),
-	                                      [](SceneNode const &scene_node) { return scene_node.node->get_name() == "Cube_1"; })
-	                             ->node->get_transform();
-	static auto  translation = transform.get_translation();
-	static float difference  = 0;
-	static bool  rising      = true;
-
-	/* Checking if tick time passed away */
-	if (time_pass > tick_limit)
-	{
-		/* Determine direction of x axis */
-		if (difference < -delta)
-		{
-			rising = true;
-		}
-		else if (difference > delta)
-		{
-			rising = false;
-		}
-
-		/* Move object by step value */
-		if (rising == true)
-		{
-			translation.x += move_step;
-			difference += move_step;
-		}
-		else
-		{
-			translation.x -= move_step;
-			difference -= move_step;
-		}
-		time_pass = 0;
-
-		/* Write new position to object */
-		transform.set_translation(translation);
-		gui_settings.time_tick = true;
-		build_command_buffers();
-	}
-}
-
-/**
  * @fn void LogicOpDynamicState::on_update_ui_overlay(vkb::Drawer &drawer)
  * @brief Projecting GUI and transferring data between GUI and app
  */
 void LogicOpDynamicState::on_update_ui_overlay(vkb::Drawer &drawer)
 {
-	//std::vector<std::string> combo_box_items = {"Or",
-	//                                            "XOR",
-	//                                            "And"};
-	//if (drawer.header("Settings"))
-	//{
-	//	if (drawer.combo_box("Logic operation", &gui_settings.selectd_operation, combo_box_items))
-	//	{
-	//		update_uniform_buffers();
-	//	}
-	//}
-
-		if (drawer.header("Settings"))
+	if (drawer.header("Settings"))
 	{
-		if (drawer.checkbox("Tessellation Enable", &gui_settings.tessellation))
+		std::vector<std::string> logic_op;     //= {"CLEAR", "AND", "AND_REVERSE", "COPY", "AND_INVERTED", "NO_OP", "XOR", "OR",
+		                                   //  "NOR", "EQUIVALENT", "INVERT", "OR_REVERSE", "COPY_INVERTED", "OR_INVERTED", "NAND", "SET"};
+
+		//const std::string to_string(VkLogicOp operation);
+		for (int i = 0; i <= VK_LOGIC_OP_SET; ++i)
+		{
+			logic_op.push_back(vkb::to_string(static_cast<VkLogicOp>(i)));
+		}
+
+		
+		if (drawer.combo_box("Logic operation", &gui_settings.selectd_operation, logic_op))
 		{
 			update_uniform_buffers();
-		}
-
-		/* Maximum tessellation factor is set to 4.0 */
-		if (drawer.slider_float("Tessellation Factor", &gui_settings.tess_factor, 1.0f, 4.0f))
-		{
-			update_uniform_buffers();
-		}
-	}
-	if (drawer.header("Models"))
-	{
-		drawer.checkbox("Selection effect active", &gui_settings.selection_active);
-		int                      obj_cnt = scene_elements_baseline.size();
-		std::vector<std::string> obj_names;
-
-		for (int i = 0; i < obj_cnt; ++i)
-		{
-			obj_names.push_back((scene_elements_baseline.at(i).name).c_str());
-		}
-		drawer.combo_box("Name", &gui_settings.selected_obj, obj_names);
-		drawer.checkbox("Depth Bias Enable", &gui_settings.objects[gui_settings.selected_obj].depth_bias);
-		drawer.checkbox("Rasterizer Discard", &gui_settings.objects[gui_settings.selected_obj].rasterizer_discard);
-	}
-
-}
-
-/**
- * @fn void LogicOpDynamicState::update(float delta_time)
- * @brief Function which was called in every frame.
- * @details For presenting z-fighting, a small animation was implemented (cube_animation)
- */
-void LogicOpDynamicState::update(float delta_time)
-{
-	cube_animation(delta_time);
-	ApiVulkanSample::update(delta_time);
-}
-
-/**
- * @fn glm::vec4 LogicOpDynamicState::get_changed_alpha(const vkb::sg::PBRMaterial *original_mat)
- * @brief Changing alpha value to create blinking effect on selected model
- * @returns Color of original_mat with changed alpha value
- */
-glm::vec4 LogicOpDynamicState::get_changed_alpha(const vkb::sg::PBRMaterial *original_mat)
-{
-	static bool     rise             = false;
-	static int      previous_obj_id  = gui_settings.selected_obj;
-	static float    accumulated_diff = 0.0f;
-	constexpr float alpha_step       = 0.075f;
-	constexpr float alpha_max        = 0.98f;
-	constexpr float alpha_min        = 0.3f;
-	glm::vec4       color            = original_mat->base_color_factor;
-
-	/* Change alpha value */
-	if (gui_settings.time_tick == true)
-	{
-		accumulated_diff += rise ? alpha_step : -alpha_step;
-		gui_settings.time_tick = false;
-	}
-	color.w += accumulated_diff;
-
-	/* Detecting change of selected object */
-	if (previous_obj_id != gui_settings.selected_obj)
-	{
-		accumulated_diff = 0.0f;
-		previous_obj_id  = gui_settings.selected_obj;
-	}
-	/* Determine if alpha need to increase or decrease */
-	if (color.w < alpha_min)
-	{
-		rise = true;
-	}
-	else if (color.w > alpha_max)
-	{
-		rise = false;
-	}
-
-	return color;
-}
-
-/**
- * @fn void LogicOpDynamicState::scene_pipeline_divide(std::vector<SceneNode> const &scene_node)
- * @brief Spliting main scene into two separate.
- * @details This operation is required to use same "draw_from_scene" function to draw models that are using different
- * 			pipelines (baseline and tessellation)
- */
-void LogicOpDynamicState::scene_pipeline_divide(std::vector<SceneNode> const &scene_node)
-{
-	/* Divide main scene to two (baseline and tessellation) */
-	for (int i = 0; i < scene_node.size(); i++)
-	{
-		if (scene_node.at(i).name == "Geosphere")
-		{
-			scene_elements_tess.push_back(scene_node.at(i));
-		}
-		else
-		{
-			scene_elements_baseline.push_back(scene_node.at(i));
 		}
 	}
 }
