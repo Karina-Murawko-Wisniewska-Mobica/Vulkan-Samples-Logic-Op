@@ -156,6 +156,9 @@ void LogicOpDynamicState::build_command_buffers()
 		VkRect2D scissor = vkb::initializers::rect2D(static_cast<int>(width), static_cast<int>(height), 0, 0);
 		vkCmdSetScissor(draw_cmd_buffer, 0, 1, &scissor);
 
+		/* No operation for background */
+		vkCmdSetLogicOpEXT(draw_cmd_buffer, VK_LOGIC_OP_COPY);
+
 		/* Binding background pipeline and descriptor sets  */
 		vkCmdBindDescriptorSets(draw_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layouts.background, 0, 1, &descriptor_sets.background, 0, VK_NULL_HANDLE);
 		vkCmdBindPipeline(draw_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.background);
@@ -164,10 +167,10 @@ void LogicOpDynamicState::build_command_buffers()
 		vkCmdSetPrimitiveTopologyEXT(draw_cmd_buffer, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 		vkCmdSetPrimitiveRestartEnableEXT(draw_cmd_buffer, VK_FALSE);
 
-		//vkCmdSetLogicOpEXT(draw_cmd_buffer, logic_op);        //TODO check the command
 		/* Drawing background */
 		draw_model(background_model, draw_cmd_buffer);
 
+		vkCmdSetLogicOpEXT(draw_cmd_buffer, static_cast<VkLogicOp>(gui_settings.selected_operation));
 
 		/* Binding baseline pipeline and descriptor sets */
 		vkCmdBindDescriptorSets(draw_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layouts.baseline, 0, 1, &descriptor_sets.baseline, 0, VK_NULL_HANDLE);
@@ -177,14 +180,10 @@ void LogicOpDynamicState::build_command_buffers()
 		/*vkCmdSetPrimitiveTopologyEXT(draw_cmd_buffer, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 		vkCmdSetPrimitiveRestartEnableEXT(draw_cmd_buffer, VK_FALSE);*/
 
-		//VkLogicOp logic_op = VK_LOGIC_OP_CLEAR;
-		//vkCmdSetLogicOpEXT(draw_cmd_buffer, logic_op);        //TODO check the command
-
 		/* Changing topology to triangle strip with using primitive restart feature */
 		vkCmdSetPrimitiveTopologyEXT(draw_cmd_buffer, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
 		vkCmdSetPrimitiveRestartEnableEXT(draw_cmd_buffer, VK_TRUE);
-		
-		//vkCmdSetLogicOpEXT(draw_cmd_buffer, logic_op);        //TODO check the command
+
 		/* Draw model with primitive restart functionality */
 		draw_created_model(draw_cmd_buffer);
 		
@@ -209,7 +208,6 @@ void LogicOpDynamicState::request_gpu_features(vkb::PhysicalDevice &gpu)
 	    gpu.request_extension_features<VkPhysicalDeviceExtendedDynamicState2FeaturesEXT>(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_2_FEATURES_EXT);
 	requested_extended_dynamic_state2_features.extendedDynamicState2        = VK_TRUE;
 	requested_extended_dynamic_state2_features.extendedDynamicState2LogicOp = VK_TRUE;
-	//requested_extended_dynamic_state2_features.extendedDynamicState2LogicOp = VK_TRUE;
 
 	auto &requested_extended_dynamic_state_feature =
 	    gpu.request_extension_features<VkPhysicalDeviceExtendedDynamicStateFeaturesEXT>(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT);
@@ -263,6 +261,7 @@ void LogicOpDynamicState::create_pipeline()
 	    vkb::initializers::pipeline_color_blend_attachment_state(
 	        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
 	        VK_TRUE); //?? FALSE
+	//VK_FALSE);
 
 	blend_attachment_state.colorBlendOp        = VK_BLEND_OP_ADD;
 	blend_attachment_state.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
@@ -271,13 +270,14 @@ void LogicOpDynamicState::create_pipeline()
 	blend_attachment_state.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
 	blend_attachment_state.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
 
+
 	VkPipelineColorBlendStateCreateInfo color_blend_state =
 	    vkb::initializers::pipeline_color_blend_state_create_info(
 	        1,
 	        &blend_attachment_state);
 
 	color_blend_state.logicOpEnable = VK_TRUE;
-	color_blend_state.logicOp = VK_LOGIC_OP_AND;
+	color_blend_state.logicOp       = VK_LOGIC_OP_COPY;
 	
 
 	/* Note: Using Reversed depth-buffer for increased precision, so Greater depth values are kept */
@@ -298,7 +298,7 @@ void LogicOpDynamicState::create_pipeline()
 	std::vector<VkDynamicState> dynamic_state_enables = {
 	    VK_DYNAMIC_STATE_VIEWPORT,
 	    VK_DYNAMIC_STATE_SCISSOR,
-	    //VK_DYNAMIC_STATE_LOGIC_OP_EXT,
+	    VK_DYNAMIC_STATE_LOGIC_OP_EXT,
 	};
 	VkPipelineDynamicStateCreateInfo dynamic_state =
 	    vkb::initializers::pipeline_dynamic_state_create_info(
@@ -361,14 +361,14 @@ C:
 	/* Setup for second pipeline */
 	//
 	
-	color_blend_state.logicOpEnable = VK_FALSE;
+	//color_blend_state.logicOpEnable = VK_FALSE;
 
 	graphics_create.layout = pipeline_layouts.background;
 
 	std::vector<VkDynamicState> dynamic_state_enables_background = {
 	    VK_DYNAMIC_STATE_VIEWPORT,
 	    VK_DYNAMIC_STATE_SCISSOR,
-	    //VK_DYNAMIC_STATE_LOGIC_OP_EXT,
+	    VK_DYNAMIC_STATE_LOGIC_OP_EXT,
 	};
 	dynamic_state.pDynamicStates    = dynamic_state_enables_background.data();
 	dynamic_state.dynamicStateCount = static_cast<uint32_t>(dynamic_state_enables_background.size());
@@ -417,9 +417,8 @@ void LogicOpDynamicState::draw()
 void LogicOpDynamicState::load_assets()
 {
 	/* Models */
-	//model = load_model("scenes/cube.gltf");
-
-	load_scene("scenes/primitives/primitives.gltf");
+	//load_scene("scenes/primitives/primitives.gltf"); // scene from EDS2 sample
+	load_scene("scenes/cube.gltf"); //TBR, left for now before scene elemnts operations are not cleaned
 
 	std::vector<SceneNode> scene_elements;
 	// Store all scene nodes in a linear vector for easier access
@@ -687,7 +686,7 @@ void LogicOpDynamicState::model_data_creation()
 	/* Scaling and position transform */
 	for (uint8_t i = 0; i < vertex_count; ++i)
 	{
-		vertices_pos[i] *= glm::vec3(7.0f, 7.0f, 7.0f);
+		vertices_pos[i] *= glm::vec3(8.0f, 8.0f, 8.0f);
 		vertices_pos[i] += glm::vec3(0.0f, 1.0f, 5.0f);
 	}
 
@@ -821,7 +820,7 @@ void LogicOpDynamicState::on_update_ui_overlay(vkb::Drawer &drawer)
 		}
 
 		
-		if (drawer.combo_box("Logic operation", &gui_settings.selectd_operation, logic_op))
+		if (drawer.combo_box("Logic operation", &gui_settings.selected_operation, logic_op))
 		{
 			update_uniform_buffers();
 		}

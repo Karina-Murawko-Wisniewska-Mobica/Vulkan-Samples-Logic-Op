@@ -138,7 +138,7 @@ class LogicOpDynamicState : public ApiVulkanSample
 		int                            selected_obj      = 0;
 		bool                           selection_active  = true;
 		bool                           time_tick         = false;
-		int                            selectd_operation = 0;
+		int                            selected_operation = 3; /* VK_LOGIC_OP_COPY */
 	} gui_settings;
 
 	LogicOpDynamicState();
