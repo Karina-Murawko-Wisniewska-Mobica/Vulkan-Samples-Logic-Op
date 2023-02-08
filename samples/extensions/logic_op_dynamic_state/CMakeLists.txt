@@ -28,5 +28,5 @@ add_sample(
     SHADER_FILES_GLSL
     "logic_op_dynamic_state/background.vert"
     "logic_op_dynamic_state/background.frag"
-    "logic_op_dynamic_state/model.vert"
-    "logic_op_dynamic_state/model.frag")
+    "logic_op_dynamic_state/baseline.vert"
+    "logic_op_dynamic_state/baseline.frag")

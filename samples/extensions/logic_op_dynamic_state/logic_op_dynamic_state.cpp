@@ -15,16 +15,16 @@
  * limitations under the License.
  */
 
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
 
 #include "logic_op_dynamic_state.h"
 
 #include "gltf_loader.h"
 #include "scene_graph/components/mesh.h"
-#include "scene_graph/components/sub_mesh.h"
 #include "scene_graph/components/pbr_material.h"
+#include "scene_graph/components/sub_mesh.h"
 
 LogicOpDynamicState::LogicOpDynamicState()
 {
@@ -69,15 +69,15 @@ bool LogicOpDynamicState::prepare(vkb::Platform &platform)
 	}
 
 	// Attach a move script to the camera component in the scene
-	//auto &camera_node = vkb::add_free_camera(*scene, "main_camera", get_render_context().get_surface_extent());
-	//auto  camera      = &camera_node.get_component<vkb::sg::Camera>();
+	// auto &camera_node = vkb::add_free_camera(*scene, "main_camera", get_render_context().get_surface_extent());
+	// auto  camera      = &camera_node.get_component<vkb::sg::Camera>();
 	camera.type = vkb::CameraType::LookAt;
 	camera.set_position({2.0f, -4.0f, -10.0f});
 	camera.set_rotation({-15.0f, 190.0f, 0.0f});
 	camera.set_perspective(60.0f, static_cast<float>(width) / static_cast<float>(height), 256.0f, 0.1f);
 
 	load_assets();
-	model_data_creation();        //R
+	model_data_creation();        // R
 	prepare_uniform_buffers();
 	create_descriptor_pool();
 
@@ -125,8 +125,8 @@ void LogicOpDynamicState::render(float delta_time)
 void LogicOpDynamicState::build_command_buffers()
 {
 	std::array<VkClearValue, 2> clear_values{};
-	//clear_values[0].color = {{0.5f, 0.25f, 1.0f, 1.0f}};
- 	//   clear_values[0].color = {{0.95f, 0.95f, 1.0f, 1.0f}};
+	// clear_values[0].color = {{0.5f, 0.25f, 1.0f, 1.0f}};
+	//    clear_values[0].color = {{0.95f, 0.95f, 1.0f, 1.0f}};
 	clear_values[0].color        = {{0.0f, 0.0f, 0.0f, 0.0f}};
 	clear_values[1].depthStencil = {0.0f, 0};
 
@@ -186,7 +186,7 @@ void LogicOpDynamicState::build_command_buffers()
 
 		/* Draw model with primitive restart functionality */
 		draw_created_model(draw_cmd_buffer);
-		
+
 		/* UI */
 		draw_ui(draw_cmd_buffer);
 
@@ -260,8 +260,8 @@ void LogicOpDynamicState::create_pipeline()
 	VkPipelineColorBlendAttachmentState blend_attachment_state =
 	    vkb::initializers::pipeline_color_blend_attachment_state(
 	        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
-	        VK_TRUE); //?? FALSE
-	//VK_FALSE);
+	        VK_TRUE);        //?? FALSE
+	// VK_FALSE);
 
 	blend_attachment_state.colorBlendOp        = VK_BLEND_OP_ADD;
 	blend_attachment_state.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
@@ -270,7 +270,6 @@ void LogicOpDynamicState::create_pipeline()
 	blend_attachment_state.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
 	blend_attachment_state.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
 
-
 	VkPipelineColorBlendStateCreateInfo color_blend_state =
 	    vkb::initializers::pipeline_color_blend_state_create_info(
 	        1,
@@ -278,7 +277,6 @@ void LogicOpDynamicState::create_pipeline()
 
 	color_blend_state.logicOpEnable = VK_TRUE;
 	color_blend_state.logicOp       = VK_LOGIC_OP_COPY;
-	
 
 	/* Note: Using Reversed depth-buffer for increased precision, so Greater depth values are kept */
 	VkPipelineDepthStencilStateCreateInfo depth_stencil_state =
@@ -323,14 +321,14 @@ void LogicOpDynamicState::create_pipeline()
 	vertex_input_state.vertexAttributeDescriptionCount      = static_cast<uint32_t>(vertex_input_attributes.size());
 	vertex_input_state.pVertexAttributeDescriptions         = vertex_input_attributes.data();
 
-	//rasterization_state.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	// rasterization_state.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
-	//std::array<VkPipelineShaderStageCreateInfo, 2> shader_stages{};
-	//shader_stages[0] = load_shader("logic_op_dynamic_state/model.vert", VK_SHADER_STAGE_VERTEX_BIT);
-	//shader_stages[1] = load_shader("logic_op_dynamic_state/model.frag", VK_SHADER_STAGE_FRAGMENT_BIT);
+	// std::array<VkPipelineShaderStageCreateInfo, 2> shader_stages{};
+	// shader_stages[0] = load_shader("logic_op_dynamic_state/model.vert", VK_SHADER_STAGE_VERTEX_BIT);
+	// shader_stages[1] = load_shader("logic_op_dynamic_state/model.frag", VK_SHADER_STAGE_FRAGMENT_BIT);
 
-	//shader_stages[0] = load_shader("logic_op_dynamic_state/background.vert", VK_SHADER_STAGE_VERTEX_BIT);
-	//shader_stages[1] = load_shader("logic_op_dynamic_state/background.frag", VK_SHADER_STAGE_FRAGMENT_BIT);
+	// shader_stages[0] = load_shader("logic_op_dynamic_state/background.vert", VK_SHADER_STAGE_VERTEX_BIT);
+	// shader_stages[1] = load_shader("logic_op_dynamic_state/background.frag", VK_SHADER_STAGE_FRAGMENT_BIT);
 
 	std::array<VkPipelineShaderStageCreateInfo, 4> shader_stages{};
 	shader_stages[0] = load_shader("logic_op_dynamic_state/baseline.vert", VK_SHADER_STAGE_VERTEX_BIT);
@@ -360,8 +358,8 @@ C:
 
 	/* Setup for second pipeline */
 	//
-	
-	//color_blend_state.logicOpEnable = VK_FALSE;
+
+	// color_blend_state.logicOpEnable = VK_FALSE;
 
 	graphics_create.layout = pipeline_layouts.background;
 
@@ -417,8 +415,8 @@ void LogicOpDynamicState::draw()
 void LogicOpDynamicState::load_assets()
 {
 	/* Models */
-	//load_scene("scenes/primitives/primitives.gltf"); // scene from EDS2 sample
-	load_scene("scenes/cube.gltf"); //TBR, left for now before scene elemnts operations are not cleaned
+	// load_scene("scenes/primitives/primitives.gltf"); // scene from EDS2 sample
+	load_scene("scenes/cube.gltf");        // TBR, left for now before scene elemnts operations are not cleaned
 
 	std::vector<SceneNode> scene_elements;
 	// Store all scene nodes in a linear vector for easier access
@@ -440,10 +438,10 @@ void LogicOpDynamicState::load_assets()
 	textures.envmap = load_texture_cubemap("textures/uffizi_rgba16f_cube.ktx", vkb::sg::Image::Color);
 }
 
-//TODO
+// TODO
 void LogicOpDynamicState::create_descriptor_pool()
 {
-	//constexpr uint32_t num_descriptor_sets = 3;
+	// constexpr uint32_t num_descriptor_sets = 3;
 	constexpr uint32_t num_descriptor_sets = 2;
 
 	std::vector<VkDescriptorPoolSize> pool_sizes = {
@@ -576,7 +574,7 @@ void LogicOpDynamicState::create_descriptor_sets()
  */
 void LogicOpDynamicState::draw_from_scene(VkCommandBuffer command_buffer, std::vector<SceneNode> const &scene_node)
 {
-	//for (int i = 0; i < scene_node.size(); ++i)
+	// for (int i = 0; i < scene_node.size(); ++i)
 	//{
 	//	const auto &vertex_buffer_pos    = scene_node[i].sub_mesh->vertex_buffers.at("position");
 	//	const auto &vertex_buffer_normal = scene_node[i].sub_mesh->vertex_buffers.at("normal");
@@ -608,14 +606,14 @@ void LogicOpDynamicState::draw_from_scene(VkCommandBuffer command_buffer, std::v
 
 	//	vkCmdDrawIndexed(command_buffer, scene_node[i].sub_mesh->vertex_indices, 1, 0, 0, 0);
 	//}
-	//vkCmdSetDepthBiasEnableEXT(command_buffer, VK_FALSE);
-	//vkCmdSetRasterizerDiscardEnableEXT(command_buffer, VK_FALSE);
+	// vkCmdSetDepthBiasEnableEXT(command_buffer, VK_FALSE);
+	// vkCmdSetRasterizerDiscardEnableEXT(command_buffer, VK_FALSE);
 
 	for (int i = 0; i < scene_node.size(); ++i)
 	{
 		const auto &vertex_buffer_pos    = scene_node[i].sub_mesh->vertex_buffers.at("position");
 		const auto &vertex_buffer_normal = scene_node[i].sub_mesh->vertex_buffers.at("normal");
-		auto &      index_buffer         = scene_node[i].sub_mesh->index_buffer;
+		auto       &index_buffer         = scene_node[i].sub_mesh->index_buffer;
 
 		if (scene_node.at(i).name != "Geosphere")
 		{
@@ -628,7 +626,7 @@ void LogicOpDynamicState::draw_from_scene(VkCommandBuffer command_buffer, std::v
 		push_const_block.model_matrix = scene_node[i].node->get_transform().get_world_matrix();
 		/*	if (gui_settings.selection_active && i == gui_settings.selected_obj)
 		{
-			push_const_block.color = get_changed_alpha(node_material);
+		    push_const_block.color = get_changed_alpha(node_material);
 		}
 		else
 		{*/
@@ -790,11 +788,11 @@ void LogicOpDynamicState::model_data_creation()
 
 void LogicOpDynamicState::draw_created_model(VkCommandBuffer commandBuffer)
 {
-	//Probably to remove
+	// Probably to remove
 
 	VkDeviceSize offsets[1] = {0};
-	//push_const_block.color  = glm::vec4{0.5f, 1.0f, 1.0f, 1.0f};
-	push_const_block.color  = glm::vec4{0.75f, 1.0f, 1.0f, 1.0f};
+	// push_const_block.color  = glm::vec4{0.5f, 1.0f, 1.0f, 1.0f};
+	push_const_block.color = glm::vec4{0.75f, 1.0f, 1.0f, 1.0f};
 	vkCmdPushConstants(commandBuffer, pipeline_layouts.baseline, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(push_const_block), &push_const_block);
 	vkCmdBindVertexBuffers(commandBuffer, 0, 1, cube.vertices_pos->get(), offsets);
 	vkCmdBindVertexBuffers(commandBuffer, 1, 1, cube.vertices_norm->get(), offsets);
@@ -810,16 +808,15 @@ void LogicOpDynamicState::on_update_ui_overlay(vkb::Drawer &drawer)
 {
 	if (drawer.header("Settings"))
 	{
-		std::vector<std::string> logic_op;     //= {"CLEAR", "AND", "AND_REVERSE", "COPY", "AND_INVERTED", "NO_OP", "XOR", "OR",
-		                                   //  "NOR", "EQUIVALENT", "INVERT", "OR_REVERSE", "COPY_INVERTED", "OR_INVERTED", "NAND", "SET"};
+		std::vector<std::string> logic_op;        //= {"CLEAR", "AND", "AND_REVERSE", "COPY", "AND_INVERTED", "NO_OP", "XOR", "OR",
+		                                          //  "NOR", "EQUIVALENT", "INVERT", "OR_REVERSE", "COPY_INVERTED", "OR_INVERTED", "NAND", "SET"};
 
-		//const std::string to_string(VkLogicOp operation);
+		// const std::string to_string(VkLogicOp operation);
 		for (int i = 0; i <= VK_LOGIC_OP_SET; ++i)
 		{
 			logic_op.push_back(vkb::to_string(static_cast<VkLogicOp>(i)));
 		}
 
-		
 		if (drawer.combo_box("Logic operation", &gui_settings.selected_operation, logic_op))
 		{
 			update_uniform_buffers();

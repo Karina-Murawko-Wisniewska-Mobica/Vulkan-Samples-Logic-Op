@@ -33,13 +33,13 @@ class LogicOpDynamicState : public ApiVulkanSample
 		bool rasterizer_discard = false;
 	} ModelDynamicParam;
 
-	//struct UBOVS
+	// struct UBOVS
 	//{
 	//	glm::mat4 projection;
 	//	glm::mat4 modelview;
 	//	glm::mat4 background_modelview;
 	//	//float     modelscale = 0.15f;
-	//} ubo_vs;
+	// } ubo_vs;
 
 	/* Buffer used in all pipelines */
 	struct UBOCOMM
@@ -110,7 +110,7 @@ class LogicOpDynamicState : public ApiVulkanSample
 	struct SceneNode
 	{
 		std::string       name;
-		vkb::sg::Node *   node;
+		vkb::sg::Node    *node;
 		vkb::sg::SubMesh *sub_mesh;
 	};
 
@@ -124,20 +124,20 @@ class LogicOpDynamicState : public ApiVulkanSample
 		uint32_t                           index_count;
 	} cube;
 
-	//struct
+	// struct
 	//{
 	//	int selectd_operation = 0;
 	//	bool time_tick = false;
-	//} gui_settings;
+	// } gui_settings;
 
 	struct
 	{
 		bool                           tessellation = false;
 		float                          tess_factor  = 1.0f;
 		std::vector<ModelDynamicParam> objects;
-		int                            selected_obj      = 0;
-		bool                           selection_active  = true;
-		bool                           time_tick         = false;
+		int                            selected_obj       = 0;
+		bool                           selection_active   = true;
+		bool                           time_tick          = false;
 		int                            selected_operation = 3; /* VK_LOGIC_OP_COPY */
 	} gui_settings;
 
