@@ -23,7 +23,7 @@
 
 #include "gltf_loader.h"
 
-/* Initialization of vector of labels for GUI */
+/* Initialize the static variable containing a vector of logic operations' labels for GUI */
 std::vector<std::string> LogicOpDynamicState::GUI_settings::logic_op_names =
     LogicOpDynamicState::GUI_settings::init_logic_op_names();
 
@@ -69,6 +69,7 @@ bool LogicOpDynamicState::prepare(vkb::Platform &platform)
 		return false;
 	}
 
+	/* Set up camera properties */
 	camera.type = vkb::CameraType::LookAt;
 	camera.set_position({2.0f, -4.0f, -10.0f});
 	camera.set_rotation({-15.0f, 190.0f, 0.0f});
@@ -89,11 +90,11 @@ bool LogicOpDynamicState::prepare(vkb::Platform &platform)
 
 /**
  * 	@fn void LogicOpDynamicState::create_render_context(vkb::Platform &platform)
- * 	@brief Setting custom surface format priority list to set required VK_FORMAT_B8G8R8A8_UNORM format
+ * 	@brief Setting custom surface format priority list to required VK_FORMAT_B8G8R8A8_UNORM format
  */
 void LogicOpDynamicState::create_render_context(vkb::Platform &platform)
 {
-	/* UNORM surface is required fr logic operations */
+	/* UNORM surface is required for logic operations */
 	auto surface_priority_list = std::vector<VkSurfaceFormatKHR>{
 	    {VK_FORMAT_B8G8R8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR},
 	};
@@ -168,9 +169,6 @@ void LogicOpDynamicState::build_command_buffers()
 		/* Drawing background */
 		draw_model(background_model, draw_cmd_buffer);
 
-		/* Set logic operation chosen in GUI for the cube model */
-		vkCmdSetLogicOpEXT(draw_cmd_buffer, static_cast<VkLogicOp>(gui_settings.selected_operation));
-
 		/* Binding baseline pipeline and descriptor sets */
 		vkCmdBindDescriptorSets(draw_cmd_buffer,
 		                        VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -186,7 +184,10 @@ void LogicOpDynamicState::build_command_buffers()
 		vkCmdSetPrimitiveTopologyEXT(draw_cmd_buffer, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
 		vkCmdSetPrimitiveRestartEnableEXT(draw_cmd_buffer, VK_TRUE);
 
-		/* Draw model with primitive restart functionality */
+		/* Set logic operation chosen in GUI for the cube model */
+		vkCmdSetLogicOpEXT(draw_cmd_buffer, static_cast<VkLogicOp>(gui_settings.selected_operation));
+
+		/* Draw model */
 		draw_created_model(draw_cmd_buffer);
 
 		/* UI */
@@ -274,9 +275,7 @@ void LogicOpDynamicState::create_pipeline()
 	blend_attachment_state.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
 
 	VkPipelineColorBlendStateCreateInfo color_blend_state =
-	    vkb::initializers::pipeline_color_blend_state_create_info(
-	        1,
-	        &blend_attachment_state);
+	    vkb::initializers::pipeline_color_blend_state_create_info(1, &blend_attachment_state);
 
 	/* Enable logic operations */
 	color_blend_state.logicOpEnable = VK_TRUE;
@@ -326,7 +325,7 @@ void LogicOpDynamicState::create_pipeline()
 	shader_stages[0] = load_shader("logic_op_dynamic_state/baseline.vert", VK_SHADER_STAGE_VERTEX_BIT);
 	shader_stages[1] = load_shader("logic_op_dynamic_state/baseline.frag", VK_SHADER_STAGE_FRAGMENT_BIT);
 C:
-	/* Use the pNext to point to the rendering create struct */
+	/* Use the pNext to point to the rendering create structure */
 	VkGraphicsPipelineCreateInfo graphics_create{VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
 	graphics_create.pNext               = VK_NULL_HANDLE;
 	graphics_create.renderPass          = render_pass;
