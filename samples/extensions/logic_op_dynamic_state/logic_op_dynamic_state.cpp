@@ -23,11 +23,15 @@
 
 #include "gltf_loader.h"
 
+/* Initialization of vector of labels for GUI */
+std::vector<std::string> LogicOpDynamicState::GUI_settings::logic_op_names =
+    LogicOpDynamicState::GUI_settings::init_logic_op_names();
 
 LogicOpDynamicState::LogicOpDynamicState()
 {
 	title = "Logic Operations Dynamic State";
 
+	/* Extensions required for dynamic logic operations */
 	add_instance_extension(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 	add_device_extension(VK_EXT_EXTENDED_DYNAMIC_STATE_2_EXTENSION_NAME);
 	add_device_extension(VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME);
@@ -89,8 +93,7 @@ bool LogicOpDynamicState::prepare(vkb::Platform &platform)
  */
 void LogicOpDynamicState::create_render_context(vkb::Platform &platform)
 {
-	// We always want an sRGB surface to match the display.
-	// If we used a UNORM surface, we'd have to do the conversion to sRGB ourselves at the end of our fragment shaders.
+	/* UNORM surface is required fr logic operations */
 	auto surface_priority_list = std::vector<VkSurfaceFormatKHR>{
 	    {VK_FORMAT_B8G8R8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR},
 	};
@@ -116,7 +119,7 @@ void LogicOpDynamicState::render(float delta_time)
 
 /**
  * 	@fn void LogicOpDynamicState::build_command_buffers()
- * 	@brief Creating command buffers and drawing particular elements on window.
+ * 	@brief Creating command buffers and drawing background and model on window
  */
 void LogicOpDynamicState::build_command_buffers()
 {
@@ -147,11 +150,15 @@ void LogicOpDynamicState::build_command_buffers()
 		VkRect2D scissor = vkb::initializers::rect2D(static_cast<int>(width), static_cast<int>(height), 0, 0);
 		vkCmdSetScissor(draw_cmd_buffer, 0, 1, &scissor);
 
-		/* No logic operation for background */
-		vkCmdSetLogicOpEXT(draw_cmd_buffer, VK_LOGIC_OP_COPY);
-
 		/* Binding background pipeline and descriptor sets  */
-		vkCmdBindDescriptorSets(draw_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layouts.background, 0, 1, &descriptor_sets.background, 0, VK_NULL_HANDLE);
+		vkCmdBindDescriptorSets(draw_cmd_buffer,
+		                        VK_PIPELINE_BIND_POINT_GRAPHICS,
+		                        pipeline_layouts.background,
+		                        0,
+		                        1,
+		                        &descriptor_sets.background,
+		                        0,
+		                        VK_NULL_HANDLE);
 		vkCmdBindPipeline(draw_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.background);
 
 		/* Setting topology to triangle list and disabling primitive restart functionality */
@@ -161,11 +168,18 @@ void LogicOpDynamicState::build_command_buffers()
 		/* Drawing background */
 		draw_model(background_model, draw_cmd_buffer);
 
-		/* Set logic operation choosen in GUI for model */
+		/* Set logic operation chosen in GUI for the cube model */
 		vkCmdSetLogicOpEXT(draw_cmd_buffer, static_cast<VkLogicOp>(gui_settings.selected_operation));
 
 		/* Binding baseline pipeline and descriptor sets */
-		vkCmdBindDescriptorSets(draw_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layouts.baseline, 0, 1, &descriptor_sets.baseline, 0, VK_NULL_HANDLE);
+		vkCmdBindDescriptorSets(draw_cmd_buffer,
+		                        VK_PIPELINE_BIND_POINT_GRAPHICS,
+		                        pipeline_layouts.baseline,
+		                        0,
+		                        1,
+		                        &descriptor_sets.baseline,
+		                        0,
+		                        VK_NULL_HANDLE);
 		vkCmdBindPipeline(draw_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.baseline);
 
 		/* Changing topology to triangle strip with using primitive restart feature */
@@ -209,8 +223,10 @@ void LogicOpDynamicState::request_gpu_features(vkb::PhysicalDevice &gpu)
 
 void LogicOpDynamicState::prepare_uniform_buffers()
 {
-	uniform_buffers.common   = std::make_unique<vkb::core::Buffer>(get_device(), sizeof(ubo_common), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-	uniform_buffers.baseline = std::make_unique<vkb::core::Buffer>(get_device(), sizeof(ubo_baseline), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+	uniform_buffers.common =
+	    std::make_unique<vkb::core::Buffer>(get_device(), sizeof(ubo_common), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+	uniform_buffers.baseline =
+	    std::make_unique<vkb::core::Buffer>(get_device(), sizeof(ubo_baseline), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
 	update_uniform_buffers();
 }
@@ -262,8 +278,8 @@ void LogicOpDynamicState::create_pipeline()
 	        1,
 	        &blend_attachment_state);
 
+	/* Enable logic operations */
 	color_blend_state.logicOpEnable = VK_TRUE;
-	color_blend_state.logicOp       = VK_LOGIC_OP_COPY;
 
 	/* Note: Using Reversed depth-buffer for increased precision, so Greater depth values are kept */
 	VkPipelineDepthStencilStateCreateInfo depth_stencil_state =
@@ -313,7 +329,7 @@ C:
 	/* Use the pNext to point to the rendering create struct */
 	VkGraphicsPipelineCreateInfo graphics_create{VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
 	graphics_create.pNext               = VK_NULL_HANDLE;
-	graphics_create.renderPass          = VK_NULL_HANDLE;
+	graphics_create.renderPass          = render_pass;
 	graphics_create.pInputAssemblyState = &input_assembly_state;
 	graphics_create.pRasterizationState = &rasterization_state;
 	graphics_create.pColorBlendState    = &color_blend_state;
@@ -327,9 +343,6 @@ C:
 	graphics_create.pStages             = shader_stages.data();
 	graphics_create.layout              = pipeline_layouts.baseline;
 
-	graphics_create.pNext      = VK_NULL_HANDLE;
-	graphics_create.renderPass = render_pass;
-
 	VK_CHECK(vkCreateGraphicsPipelines(get_device().get_handle(), pipeline_cache, 1, &graphics_create, VK_NULL_HANDLE, &pipeline.baseline));
 
 	/* Setup for second pipeline */
@@ -338,8 +351,11 @@ C:
 	std::vector<VkDynamicState> dynamic_state_enables_background = {
 	    VK_DYNAMIC_STATE_VIEWPORT,
 	    VK_DYNAMIC_STATE_SCISSOR,
-	    VK_DYNAMIC_STATE_LOGIC_OP_EXT,
 	};
+
+	/* Disable logic operations in background pipeline */
+	color_blend_state.logicOpEnable = VK_FALSE;
+
 	dynamic_state.pDynamicStates    = dynamic_state_enables_background.data();
 	dynamic_state.dynamicStateCount = static_cast<uint32_t>(dynamic_state_enables_background.size());
 
@@ -700,13 +716,7 @@ void LogicOpDynamicState::on_update_ui_overlay(vkb::Drawer &drawer)
 {
 	if (drawer.header("Settings"))
 	{
-		std::vector<std::string> logic_op_names;
-		for (int i = 0; i <= VK_LOGIC_OP_SET; ++i) /* VK_LOGIC_OP_SET is last operation in enum VkLogicOp */
-		{
-			logic_op_names.push_back(vkb::to_string(static_cast<VkLogicOp>(i)));
-		}
-
-		if (drawer.combo_box("Logic operation", &gui_settings.selected_operation, logic_op_names))
+		if (drawer.combo_box("Logic operation", &gui_settings.selected_operation, gui_settings.logic_op_names))
 		{
 			update_uniform_buffers();
 		}

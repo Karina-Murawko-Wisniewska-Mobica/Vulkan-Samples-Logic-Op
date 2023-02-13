@@ -98,9 +98,22 @@ class LogicOpDynamicState : public ApiVulkanSample
 		uint32_t                           index_count;
 	} cube;
 
-	struct
+	struct GUI_settings
 	{
-		int selected_operation = 3; /* VK_LOGIC_OP_COPY */
+		bool                            logic_op_enable    = false;
+		int                             selected_operation = 3; /* VK_LOGIC_OP_COPY */
+		static std::vector<std::string> logic_op_names;
+
+		/* Method used to initialize logic_op_names */
+		static std::vector<std::string> init_logic_op_names()
+		{
+			std::vector<std::string> names;
+			for (int i = 0; i <= VK_LOGIC_OP_SET; ++i) /* VK_LOGIC_OP_SET is last operation in enum VkLogicOp */
+			{
+				names.push_back(vkb::to_string(static_cast<VkLogicOp>(i)));
+			}
+			return names;
+		}
 	} gui_settings;
 
 	LogicOpDynamicState();
@@ -115,12 +128,10 @@ class LogicOpDynamicState : public ApiVulkanSample
 	void update_uniform_buffers();
 	void create_pipeline();
 	void draw();
-
 	void load_assets();
 	void create_descriptor_pool();
 	void setup_descriptor_set_layout();
 	void create_descriptor_sets();
-
 	void model_data_creation();
 	void draw_created_model(VkCommandBuffer commandBuffer);
 	void on_update_ui_overlay(vkb::Drawer &drawer);
