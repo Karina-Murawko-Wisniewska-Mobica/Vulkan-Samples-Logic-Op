@@ -413,10 +413,10 @@ void LogicOpDynamicState::load_assets()
  */
 void LogicOpDynamicState::create_descriptor_pool()
 {
-	const uint32_t frame_count = static_cast<uint32_t>(draw_cmd_buffers.size());
+	const uint32_t frames_count = static_cast<uint32_t>(draw_cmd_buffers.size());
 
 	std::vector<VkDescriptorPoolSize> pool_sizes = {
-	    vkb::initializers::descriptor_pool_size(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, frame_count * 2),
+	    vkb::initializers::descriptor_pool_size(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, frames_count * 2),
 	    vkb::initializers::descriptor_pool_size(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
 	};
 
